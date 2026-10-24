@@ -277,9 +277,16 @@ function updatePresetOptions(){
 function requestPresetNames(){
  const out=chosenMidiOutput();if(!out)return;
  pendingPresetNameReads=new Set(Array.from({length:32},(_,i)=>i));
- try{
-  for(let i=0;i<32;i++)sendLogged(out, parseHex("F0 41 10 00 00 00 3D 11 20 "+hex(i)+" 00 00 00 00 00 0C 00 F7"));
- }catch(err){$("midiNotice").textContent=`Preset-name read error: ${err.message||String(err)}`;}
+ // Send RQ1 requests one at a time with a small gap. Some Web MIDI transports
+ // (especially Bluetooth and mobile USB bridges) can drop replies to a rapid burst.
+ for(let i=0;i<32;i++){
+  setTimeout(()=>{
+   if(chosenMidiOutput()!==out)return;
+   try{
+    sendLogged(out, parseHex("F0 41 10 00 00 00 3D 11 20 "+hex(i)+" 00 00 00 00 00 0C 00 F7"));
+   }catch(err){$("midiNotice").textContent=`Preset-name read error: ${err.message||String(err)}`;}
+  },i*60);
+ }
 }
 let performanceControlChannelRequested=false;
 function requestPerformanceControlChannel(){
